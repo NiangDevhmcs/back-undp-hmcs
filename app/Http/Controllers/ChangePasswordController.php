@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Responses\ResponseServer;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class ChangePasswordController extends Controller
@@ -16,11 +16,7 @@ class ChangePasswordController extends Controller
 
         // Vérifie si le mot de passe actuel est correct
         if (!Hash::check($validated['current_password'], $user->password)) {
-            return response()->json([
-                'success' => false,
-                'error' => true,
-                'message' => 'Le mot de passe actuel est incorrect.',
-            ], 422);
+            return ResponseServer::incorrectCurrentPassword();
         }
 
         // Met à jour le mot de passe
@@ -31,7 +27,7 @@ class ChangePasswordController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Mot de passe changé avec succès. Veuillez vous reconnecter',
+            'message' => trans('message.change_password_success'),
         ], 200);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Responses\ResponseServer;
 use App\Jobs\SendVerificationEmail;
 use App\Models\Admin;
 use App\Models\Editor;
@@ -16,45 +17,44 @@ use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
 {
-    protected function validator(array $data)
-    {
-        $data = $this->setDefaultRole($data);
+    // protected function validator(array $data)
+    // {
+    //     $data = $this->setDefaultRole($data);
 
-        return Validator::make($data, [
-            'first_name' => ['required', 'string', 'min:2'],
-            'last_name' => ['required', 'string', 'min:2'],
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'min:8',
-                'max:254',
-                'regex:/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/',
-                'unique:users'
-            ],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'password_confirmation' => ['required'],
-            'role_id' => ['required', 'exists:roles,id'],
-
-        ], [
-            'first_name.required' => 'First name is required.',
-            'first_name.min' => 'First name must be at least 2 characters.',
-            'last_name.required' => 'Last name is required.',
-            'last_name.min' => 'Last name must be at least 2 characters.',
-            'email.required' => 'Email address is required.',
-            'email.email' => 'Please enter a valid email address.',
-            'email.min' => 'Email must be at least 8 characters.',
-            'email.max' => 'Email cannot exceed 254 characters.',
-            'email.regex' => 'Please enter a valid email address format.',
-            'email.unique' => 'This email address is already registered.',
-            'password.required' => 'Password is required.',
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.confirmed' => 'Password confirmation does not match.',
-            'password_confirmation.required' => 'Please confirm your password.',
-            'role_id.required' => 'Role is required.',
-            'role_id.exists' => 'The selected role is invalid.',
-        ]);
-    }
+    //     return Validator::make($data, [
+    //         'first_name' => ['required', 'string', 'min:2'],
+    //         'last_name' => ['required', 'string', 'min:2'],
+    //         'email' => [
+    //             'required',
+    //             'string',
+    //             'email',
+    //             'min:8',
+    //             'max:254',
+    //             'regex:/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/',
+    //             'unique:users'
+    //         ],
+    //         'password' => ['required', 'string', 'min:8', 'confirmed'],
+    //         'password_confirmation' => ['required'],
+    //         'role_id' => ['required', 'exists:roles,id'],
+    //     ], [
+    //         'first_name.required' => 'First name is required.',
+    //         'first_name.min' => 'First name must be at least 2 characters.',
+    //         'last_name.required' => 'Last name is required.',
+    //         'last_name.min' => 'Last name must be at least 2 characters.',
+    //         'email.required' => 'Email address is required.',
+    //         'email.email' => 'Please enter a valid email address.',
+    //         'email.min' => 'Email must be at least 8 characters.',
+    //         'email.max' => 'Email cannot exceed 254 characters.',
+    //         'email.regex' => 'Please enter a valid email address format.',
+    //         'email.unique' => 'This email address is already registered.',
+    //         'password.required' => 'Password is required.',
+    //         'password.min' => 'Password must be at least 8 characters.',
+    //         'password.confirmed' => 'Password confirmation does not match.',
+    //         'password_confirmation.required' => 'Please confirm your password.',
+    //         'role_id.required' => 'Role is required.',
+    //         'role_id.exists' => 'The selected role is invalid.',
+    //     ]);
+    // }
 
     /**
      * Set the default role to Admin if not provided
@@ -133,25 +133,23 @@ class RegisterController extends Controller
         try {
             $data = $request->all();
 
-            // Apply default role before validation
+            // Appliquer le rôle par défaut avant la validation
             $data = $this->setDefaultRole($data);
 
-            $validator = $this->validator($data);
+            // Validation avec un tableau au lieu d'un objet Request
+            $validator = ResponseServer::validatedRegister($data);
 
             if ($validator->fails()) {
-                $firstError = $validator->errors()->first();
                 return response()->json([
                     'success' => false,
                     'error' => 'Validation failed',
-                    'message' => $firstError,
+                    'message' => $validator->errors()->first(),
                     'errors' => $validator->errors()
                 ], 422);
             }
 
-            $user = $this->create($data);
+            $user = $this->create($validator->validated());
             SendVerificationEmail::dispatch($user);
-
-            // $user->sendEmailVerificationNotification();
 
             return response()->json([
                 'success' => true,
@@ -166,4 +164,5 @@ class RegisterController extends Controller
             ], 500);
         }
     }
+
 }

@@ -10,7 +10,10 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\LanguageMiddleware;
 use Illuminate\Http\Request;
+
+Route::middleware([LanguageMiddleware::class])->group(function () {
 
 Route::withoutMiddleware([Authenticate::class])->group(function () {
     Route::post('login', [AuthController::class, 'login']);
@@ -33,6 +36,7 @@ Route::withoutMiddleware([Authenticate::class])->group(function () {
     // Route::get('/email/verify/{id}/{hash}', [VerifyEmailController::class, '__invoke'])
     //     ->middleware(['signed', 'throttle:6,1'])
     //     ->name('verification.verify');
+});
 });
 
 

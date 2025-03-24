@@ -58,7 +58,6 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $e)
     {
-        Log::info("test----------");
         // Handle authentication exceptions for API
         if ($e instanceof \Illuminate\Auth\AuthenticationException) {
             return response()->json([

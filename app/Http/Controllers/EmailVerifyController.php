@@ -24,14 +24,14 @@ class EmailVerifyController extends Controller
         if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid verification link'
+                'message' => trans('message.invalid_link')
             ], 403);
         }
 
         if ($user->hasVerifiedEmail()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Email already verified'
+                'message' => trans('message.email_already_verified')
             ]);
         }
 
@@ -41,7 +41,7 @@ class EmailVerifyController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Email verified successfully'
+            'message' => trans('message.email_verify_success')
         ]);
     }
 
@@ -69,7 +69,7 @@ class EmailVerifyController extends Controller
         if ($user->hasVerifiedEmail()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Email already verified'
+                'message' => trans('message.email_already_verified')
             ]);
         }
 
@@ -78,7 +78,7 @@ class EmailVerifyController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Verification email resent'
+            'message' => trans('message.send_email_verify')
         ]);
     }
 }

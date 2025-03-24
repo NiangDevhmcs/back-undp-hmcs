@@ -15,12 +15,12 @@ class ApplicationSettingSeeder extends Seeder
     {
         ApplicationSetting::create([
             'logo' => null,
-            'name' => 'Your Company Name',
+            'name' => 'UNDP',
             'address' => 'Main Street, City, Country',
             'email' => 'contact@yourcompany.com',
             'phone_one' => '780987654',
             'phone_two' => '780987654',
-            'slogan'=>'Orchestrez vos boutiques, maximisez vos résultats'
+            'slogan'=>'UNDP'
         ]);
     }
 }

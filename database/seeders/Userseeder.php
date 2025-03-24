@@ -20,7 +20,7 @@ class Userseeder extends Seeder
         $user = User::create([
             'first_name' => 'Ibrahima',
             'last_name' => 'NIANG',
-            'email' => 'niangdev031299@gmail.com',
+            'email' => 'unpd@gmail.com',
             'phone_number_one' => '770906538',
             'status' => true,
             'address' => 'Bargny',

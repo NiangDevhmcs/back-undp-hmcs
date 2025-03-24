@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Responses\ResponseServer;
 use App\Jobs\SendOtpEmailJob;
 use App\Models\AttemptConnexion;
 use Illuminate\Http\Request;
@@ -15,10 +16,10 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    protected const ERROR_MESSAGE = 'Email ou mot de passe incorrect';
+    // protected const ERROR_MESSAGE = 'Email ou mot de passe incorrect';
     protected const OTP_THRESHOLD = 3;
     protected const INITIAL_BLOCK_TIME = 1;
-    protected const REMEMBER_COOKIE_DURATION = 43200; // 30 jours en minutes
+    protected const REMEMBER_COOKIE_DURATION = 4320; // 3 jours en minutes
     protected const DEFAULT_COOKIE_DURATION = 120; // 2 heures en minutes
 
     public function logout(Request $request)
@@ -27,7 +28,6 @@ class AuthController extends Controller
         if ($request->user()) {
             $request->user()->tokens()->delete();
         }
-
         // Force l'expiration de la session
         if ($request->hasSession()) {
             $request->session()->flush();
@@ -38,10 +38,11 @@ class AuthController extends Controller
         $sessionCookie = cookie()->forget('laravel_session');
         $rememberCookie = cookie()->forget('remember_token');
         $jwtCookie = cookie()->forget('jwt'); // Si vous utilisez JWT
-        Log::info("ici a5");
 
         return response()
-            ->json(['message' => 'Déconnexion réussie ...', 'status' => true])
+            ->json([
+                'message' => trans('message.logout_success'),
+                'status' => true])
             ->withCookie($sessionCookie)
             ->withCookie($rememberCookie)
             ->withCookie($jwtCookie);
@@ -50,11 +51,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         try {
-            $credentials = $request->validate([
-                'email' => 'required|email|max:255',
-                'password' => 'required|string|min:8',
-                'remember_me' => 'nullable|boolean'
-            ]);
+            Log::info($request->all());
+            $credentials = ResponseServer::validateLoginData($request);
+            if (!is_array($credentials)) {
+                return $credentials;
+            }
 
             $remember = isset($credentials['remember_me']) && $credentials['remember_me'] === true;
 
@@ -68,14 +69,14 @@ class AuthController extends Controller
             if (!$user->hasVerifiedEmail()) {
                 // Renvoyer un email de vérification
                 \App\Jobs\SendVerificationEmail::dispatch($user);
-                
+
                 return response()->json([
                     'status' => false,
-                    'message' => 'Vous devez vérifier votre adresse email avant de pouvoir vous connecter. Un nouvel email de vérification vient de vous être envoyé.',
+                    'message' => trans('message.email_verify'),
                     'email_verified' => false
                 ], 403);
             }
-            
+
             if (!$user || !$this->attemptLogin($credentials)) {
                 return $this->handleFailedLogin($attempt);
             }
@@ -96,11 +97,11 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => self::ERROR_MESSAGE
+                'message' => trans('message.incorrect_credential')
             ], 401);
         }
     }
-    
+
     protected function handleSuccessfulLogin(Request $request, bool $remember = false)
     {
         // Check if session is available before regenerating
@@ -113,7 +114,7 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        
+
         $userConnect = User::where('email', $user->email)->first();
         $userConnect->requires_otp = false;
         $userConnect->save();
@@ -128,20 +129,20 @@ class AuthController extends Controller
         }
 
         $fullName = $user->first_name. ' ' .$user->last_name;
-        
+
         // Définir la durée du cookie en fonction de l'option remember_me
         $cookieDuration = $remember ? self::REMEMBER_COOKIE_DURATION : self::DEFAULT_COOKIE_DURATION;
-        
+
         // Configurer le cookie de session
         $sessionCookie = cookie('laravel_session', $sessionId, $cookieDuration);
-        
+
         // Configurer le cookie de remember_token si remember_me est activé
         $response = response()->json([
             'status' => true,
-            'message' => 'Bienvenue à nouveau ' . $fullName,
+            'message' => trans('message.login_success', ['name'=>$fullName]),
             'remember_me' => $remember
         ])->withCookie($sessionCookie);
-        
+
         // Ajouter un cookie remember_token si l'option est activée
         if ($remember) {
             // Générer un nouveau remember_token ou utiliser l'existant
@@ -152,11 +153,11 @@ class AuthController extends Controller
             } else {
                 $rememberToken = $user->remember_token;
             }
-            
+
             $rememberCookie = cookie('remember_token', $rememberToken, $cookieDuration);
             $response = $response->withCookie($rememberCookie);
         }
-        
+
         return $response;
     }
 
@@ -167,7 +168,7 @@ class AuthController extends Controller
             'password' => $credentials['password']
         ]);
     }
-    
+
     protected function getLoginAttempt(Request $request)
     {
         return AttemptConnexion::firstOrCreate(
@@ -196,7 +197,7 @@ class AuthController extends Controller
     {
         return response()->json([
             'status' => false,
-            'message' => "Compte temporairement bloqué. Veuillez réessayer dans {$attempt->block_time} minute(s).",
+            'message' => trans('message.attempt_connexion', ['block_time'=>$attempt->block_time]),
         ], 429);
     }
 
@@ -227,7 +228,7 @@ class AuthController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'email' => [self::ERROR_MESSAGE]
+            'email' => trans('message.incorrect_credential')
         ]);
     }
 
@@ -238,7 +239,7 @@ class AuthController extends Controller
         // Vérifie si l'utilisateur existe
         if (!$user) {
             throw ValidationException::withMessages([
-                'email' => ['Aucun utilisateur trouvé pour cet email.']
+                'email' => [trans('message.no_user_email_found')]
             ]);
         }
 
@@ -252,18 +253,11 @@ class AuthController extends Controller
             $expireIn = app(OtpService::class)->otpExpiry;
             // Dispatche le job pour envoyer l'email en arrière-plan
             SendOtpEmailJob::dispatch($user, $otp);
-
-            return response()->json([
-                'status' => 'pending_otp',
-                'message' => 'Un code de vérification a été envoyé à votre adresse email.',
-                'requires_otp' => true,
-                'email' => $user->email,
-                'otp_expires_in' => $expireIn
-            ]);
+            return ResponseServer::requireOtpVerification($user, $expireIn);
         } catch (\Exception $e) {
             Log::error('Erreur génération OTP: ' . $e->getMessage());
             throw ValidationException::withMessages([
-                'email' => ['Erreur lors de l\'envoi du code de vérification']
+                'email' => [trans('message.error_sending_otp')]
             ]);
         }
     }
@@ -277,7 +271,7 @@ class AuthController extends Controller
             'last_attempt_at' => null
         ]);
     }
-    
+
     public function verifyOtp(Request $request)
     {
         $request->validate([
@@ -287,13 +281,13 @@ class AuthController extends Controller
         ]);
 
         $remember = isset($request->remember_me) && $request->remember_me === true;
- 
+
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !app(OtpService::class)->verify($user, $request->otp)) {
             return response()->json([
                 'status' => false,
-                'message' => 'Code de vérification invalide'
+                'message' => trans('message.invalid_otp')
             ], 401);
         }
 
@@ -307,7 +301,7 @@ class AuthController extends Controller
         if ($attempt) {
             $this->clearLoginAttempts($attempt);
         }
-        
+
         return $this->handleSuccessfulLogin($request, $remember);
     }
 
@@ -324,20 +318,20 @@ class AuthController extends Controller
                     'isAuthenticated' => true,
                     'user' => $user,
                 ]);
-            } 
-            
+            }
+
             // Vérifier si un cookie remember_token existe
             $rememberToken = $request->cookie('remember_token');
             if ($rememberToken) {
                 $user = User::where('remember_token', $rememberToken)->first();
                 if ($user) {
                     Auth::login($user);
-                    
+
                     // Régénérer l'ID de session
                     if ($request->hasSession()) {
                         $request->session()->regenerate();
                     }
-                    
+
                     $user->profile_photo_path = $user->getFirstMediaUrl('profile_picture');
                     return response()->json([
                         'isAuthenticated' => true,
@@ -345,7 +339,7 @@ class AuthController extends Controller
                     ]);
                 }
             }
-            
+
             return response()->json([
                 'isAuthenticated' => false,
                 'status_otp' => false
@@ -369,22 +363,14 @@ class AuthController extends Controller
             }
             $expireIn = app(OtpService::class)->otpExpiry;
 
-            return response()->json([
-                'status' => true,
-                'requires_otp' => $user->requires_otp,
-                'email' => $user->email,
-                'message' => 'Un code de vérification a été envoyé à votre adresse email.',
-                'otp_expires_in' => $expireIn
-            ]);
+            return ResponseServer::otpVerification($user, $expireIn);
 
         } catch (Exception $e) {
-            Log::error('Check OTP error: ' . $e->getMessage(), [
-                'email' => $request->email
-            ]);
+            Log::error('Check OTP error: ' . $e->getMessage(), [  'email' => $request->email ]);
 
             return response()->json([
                 'status' => false,
-                'message' => 'Une erreur est survenue'
+                'message' => trans('message.error_auth')
             ], 500);
         }
     }

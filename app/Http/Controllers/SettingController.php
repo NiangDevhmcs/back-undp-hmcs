@@ -22,13 +22,13 @@ class SettingController extends Controller
         }
         return response()->json([
             'data'=> $settings
-        ]);  
+        ]);
     }
 
     public function update(Request $request, $id)
     {
         $settings = ApplicationSetting::findOrFail($id);
-        
+
         if ($request->hasFile('logo')) {
             // $this->validate($request, [
             //     'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
@@ -38,12 +38,12 @@ class SettingController extends Controller
             }
             $settings->logo = $request->file('logo')->store('images', 'public');
         }
-    
+
         // Mise à jour des autres champs
         $settings->fill($request->except('logo'));
-        
+
         $settings->save();
-    
+
         return response()->json([
             'message' => 'Informations mises à jour avec succès'
         ], 200, [], JSON_UNESCAPED_SLASHES);

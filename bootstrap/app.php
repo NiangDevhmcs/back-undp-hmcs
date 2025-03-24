@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \App\Http\Middleware\LanguageMiddleware::class, // Ajout ici
         ]);
 
         $middleware->alias(['verify.cookie', \App\Http\Middleware\VerifyCookiePresence::class]);
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \Illuminate\Session\Middleware\StartSession::class,
             \App\Http\Middleware\Authenticate::class,  // Ajout ici
+            \App\Http\Middleware\LanguageMiddleware::class, // Ajout ici
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

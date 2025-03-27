@@ -1,0 +1,17 @@
+[
+    {
+        "code": "en",
+        "name": "english",
+        "flag": "https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/GB.svg"
+    },
+    {
+        "code": "fr",
+        "name": "french",
+        "flag": "https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/FR.svg"
+    },
+    {
+        "code": "pt",
+        "name": "portuguese",
+        "flag": "https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/PT.svg"
+    }
+]

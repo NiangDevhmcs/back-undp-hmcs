@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailVerifyController;
 use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
@@ -24,6 +25,7 @@ Route::withoutMiddleware([Authenticate::class])->group(function () {
     Route::post('/check-otp', [AuthController::class, 'checkOtp']);
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
     Route::post('reset-password', [ResetPasswordController::class, 'reset']);
+    Route::get('/languages', [LanguageController::class, 'index']);
 
     Route::get('/email/verify/{id}/{hash}', [EmailVerifyController::class, 'verify'])->name('verification.verify');
     Route::post('/email/resend', [EmailVerifyController::class, 'resend'])->name('verification.resend');

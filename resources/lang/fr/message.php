@@ -1,5 +1,9 @@
 <?php
     return [
+        "french" => "Français",
+        "english" => "Anglais",
+        "portuguese" => "Portuguais",
+
         'login_success' => 'Bienvenue à nouveau :name',
         'logout_success' => 'Déconnexion réussie',
         'incorrect_credential' => 'Email ou mot de passe incorrect',
